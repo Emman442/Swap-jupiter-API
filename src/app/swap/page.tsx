@@ -118,8 +118,6 @@ export default function Page() {
     fetchTokens();
   }, []);
 
-  //get Usdc Price
-
   //get Quote
   useEffect(() => {
     let interval;
@@ -261,7 +259,7 @@ export default function Page() {
             throw new Error("Invalid swap response from API");
           }
 
-          // Deserialize, sign, and send transaction
+   
           const transaction = VersionedTransaction.deserialize(
             Buffer.from(swapData.swapTransaction, "base64")
           );
@@ -331,15 +329,15 @@ export default function Page() {
 
   return (
     <div className="h-full flex items-center justify-center bg-black">
-      <div className="relative w-[35%] h-[75vh] flex flex-col gap-3">
+      <div className="relative w-[35%] h-[80vh] flex flex-col gap-3">
         <div
-          className="absolute top-[46.5%] left-[50%] w-[33px] h-[33px] items-center flex justify-center border-[1px] rounded-md z-1 bg-[#141414] transform -translate-x-1/2 "
+          className="absolute top-[44.3%] left-[50%] w-[33px] h-[33px] items-center flex justify-center border-[1px] rounded-md z-1 bg-[#141414] transform -translate-x-1/2 "
           onClick={handleTokensSwap}
         >
           <BsArrowDown size={22} color="white" />
         </div>
         <p className="text-[28px] text-white text-center font-medium">STAY INVISIBLE</p>
-        <div className="w-full rounded-[18px] border h-[40%] p-6 bg-[#101012]">
+        <div className="w-full rounded-[18px] border h-[35%] p-6 bg-[#101012]">
           <p className="mb-2 text-[14px] text-[#CDCDCF] font-semibold">SELL</p>
           <div className="flex justify-between items-center text-white">
             <input

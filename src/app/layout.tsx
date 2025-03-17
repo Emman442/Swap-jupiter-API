@@ -3,7 +3,7 @@ import {ClusterProvider} from '@/components/cluster/cluster-data-access'
 import {SolanaProvider} from '@/components/solana/solana-provider'
 import {UiLayout} from '@/components/ui/ui-layout'
 import {ReactQueryProvider} from './react-query-provider'
-import {Raleway} from "@next/font/google"
+import {Raleway} from "next/font/google"
 
 
 const raleway = Raleway({
@@ -20,8 +20,6 @@ export const metadata = {
 
 const links: { label: string; path: string }[] = [
   { label: 'Account', path: '/account' },
-  // { label: 'Clusters', path: '/clusters' },
-  // { label: 'Counter Program', path: '/counter' },
 ]
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
