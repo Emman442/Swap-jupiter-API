@@ -6,6 +6,8 @@ import { BsArrowDown } from "react-icons/bs";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import { IoIosArrowDown } from "react-icons/io";
 import { useFetchUSD } from "@/helpers/fetchusd";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+
 import {
   VersionedTransaction,
   Connection,
@@ -45,6 +47,8 @@ export default function Page() {
   }
   const initialSlippageBps = 50;
 
+
+
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
   const [tokens, setTokens] = useState<Token[]>([]);
@@ -67,8 +71,10 @@ export default function Page() {
     const button = document.querySelector(
       ".wallet-adapter-button"
     ) as HTMLButtonElement;
+    console.log("button")
     button.click();
   };
+
 
   function handleRetryLogic(error: any, retryCount: any, baseDelay: any) {
     let delay = baseDelay * Math.pow(2, retryCount);
@@ -534,6 +540,7 @@ export default function Page() {
             ? "Enter an Amount"
             : "Swap"}
         </button>
+        {/* <WalletMultiButton/> */}
       </div>
     </div>
   );

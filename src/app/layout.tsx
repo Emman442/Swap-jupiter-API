@@ -1,9 +1,19 @@
+
 import './globals.css'
-import {ClusterProvider} from '@/components/cluster/cluster-data-access'
-import {SolanaProvider} from '@/components/solana/solana-provider'
 import {UiLayout} from '@/components/ui/ui-layout'
 import {ReactQueryProvider} from './react-query-provider'
 import {Raleway} from "next/font/google"
+import { useContext, createContext } from 'react'
+
+import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
+import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+
+import {
+    PhantomWalletAdapter,
+    SolflareWalletAdapter,
+} from '@solana/wallet-adapter-wallets';
+import { clusterApiUrl } from '@solana/web3.js';
+import WalletContextProvider from './contexts/WalletContextProvider'
 
 
 const raleway = Raleway({
@@ -23,17 +33,22 @@ const links: { label: string; path: string }[] = [
 ]
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const endpoint = clusterApiUrl('devnet'); // or 'mainnet-beta'
+
+    const wallets = [
+        new PhantomWalletAdapter(),
+        new SolflareWalletAdapter(),
+    ];
   return (
     <html lang="en">
+      <head />
       <body className={raleway.className}>
-        <ReactQueryProvider>
-          <ClusterProvider>
-            <SolanaProvider>
-              <UiLayout links={links}>{children}</UiLayout>
-            </SolanaProvider>
-          </ClusterProvider>
-        </ReactQueryProvider>
+        <WalletContextProvider>
+          <ReactQueryProvider>
+            <UiLayout links={links}>{children}</UiLayout>
+          </ReactQueryProvider>
+        </WalletContextProvider>
       </body>
     </html>
-  )
+  );
 }
