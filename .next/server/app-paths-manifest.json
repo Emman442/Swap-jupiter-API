@@ -1,5 +1,5 @@
 {
+  "/api/tokens/route": "app/api/tokens/route.js",
   "/swap/page": "app/swap/page.js",
-  "/favicon.ico/route": "app/favicon.ico/route.js",
-  "/api/tokens/route": "app/api/tokens/route.js"
+  "/favicon.ico/route": "app/favicon.ico/route.js"
 }
