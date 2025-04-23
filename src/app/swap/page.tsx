@@ -1,26 +1,32 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { Buffer } from "buffer";
+import process from "process";
+// import { useWallet } from "@solana/wallet-adapter-react";
 import { IoWallet, IoChevronDown } from "react-icons/io5";
 import { BsArrowDown } from "react-icons/bs";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import { IoIosArrowDown } from "react-icons/io";
 import { useFetchUSD } from "@/helpers/fetchusd";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-
+import {useWallet, LazorConnect } from "@lazorkit/wallet";
 import {
   VersionedTransaction,
   Connection,
   clusterApiUrl,
 } from "@solana/web3.js";
 import toast from "react-hot-toast";
+import { Navbar } from "@/components/ui/header";
 interface Token {
   symbol: string;
   logo: string;
   address: string;
   decimals: string;
 }
+
+
 export default function Page() {
+    const [connection, setConnection] = useState<Connection | null>(null);
   let monInt: NodeJS.Timeout | null = null;
   const MONITOR_INTERVAL = 10000;
   const rpcUrls = [
@@ -28,6 +34,11 @@ export default function Page() {
     "https://solana-mainnet.g.alchemy.com/v2/VmNxXlLtr1Q4R0QiuoagXO6FD8Fvi9rz",
     "https://solemn-proportionate-sailboat.SOLANA_MAINNET.quiknode.pro/3618d14c4338e3d38b39e240684327a449612425/",
   ];
+
+  const {connect, isConnected, publicKey, signMessage} = useWallet()
+  console.log("public key: ", publicKey)
+  console.log("isConnected: ", isConnected)
+
 
   let currentRpcIndex = 0;
   async function getConnection() {
@@ -46,9 +57,20 @@ export default function Page() {
     throw new Error("All RPC nodes are currently unavailable");
   }
   const initialSlippageBps = 50;
+ 
+    useEffect(() => {
+      if (typeof window !== "undefined") {
+        window.Buffer = Buffer;
+        window.process = process;
+      }
 
+      const connect = async () => {
+        const connection = await getConnection();
+        setConnection(connection);
+      };
 
-
+      connect();
+    }, []);
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
   const [tokens, setTokens] = useState<Token[]>([]);
@@ -60,21 +82,29 @@ export default function Page() {
   const { secondTokenPrice: firstTokenPrice } = useFetchUSD(selectedToken);
   const [secondAmount, setSecondAmount] = useState<number>(0);
   const [query, setQuery] = useState("");
-  const { publicKey, connected, wallet, signTransaction } = useWallet();
+  const { connected, wallet, signTransaction } = useWallet();
   const [isOpen, setIsOpen] = useState(false);
   const [isSecondOpen, setIsSecondOpen] = useState(false);
   const { secondTokenPrice, fetchingUSD } = useFetchUSD(secondSelectedToken);
   const filteredTokens = tokens.filter((token) =>
     token.symbol.toLowerCase().includes(query.toLowerCase())
   );
-  const handleWalletConnect = () => {
-    const button = document.querySelector(
-      ".wallet-adapter-button"
-    ) as HTMLButtonElement;
-    console.log("button")
-    button.click();
-  };
+  // const handleWalletConnect = () => {
+  //   const button = document.querySelector(
+  //     ".wallet-adapter-button"
+  //   ) as HTMLButtonElement;
+  //   console.log("button")
+  //   button.click();
+  // };
 
+  async function handleConnect() {
+    try {
+      await connect();
+      alert("Wallet connected! Public Key: " + publicKey);
+    } catch (err: any) {
+      alert("Connection failed: " + err?.message);
+    }
+  }
 
   function handleRetryLogic(error: any, retryCount: any, baseDelay: any) {
     let delay = baseDelay * Math.pow(2, retryCount);
@@ -201,7 +231,7 @@ export default function Page() {
     try {
       setIsSwapping(true);
 
-      const connection = await getConnection(); // Ensure working RPC
+  
 
       const MAX_RETRIES = 5;
       const INITIAL_DELAY = 2000;
@@ -269,10 +299,11 @@ export default function Page() {
           const transaction = VersionedTransaction.deserialize(
             Buffer.from(swapData.swapTransaction, "base64")
           );
-          const signedTransaction = await signTransaction(transaction);
+          // const signedTransaction = await signTransaction(transaction);
+          const signedTransaction = await signMessage(transaction);
           const transactionBinary = signedTransaction.serialize();
 
-          const signature = await connection.sendRawTransaction(
+          const signature = await connection?.sendRawTransaction(
             transactionBinary,
             {
               maxRetries: 2,
@@ -280,12 +311,25 @@ export default function Page() {
             }
           );
 
-          const confirmation = await connection.confirmTransaction(
-            { signature, ...(await connection.getLatestBlockhash()) },
+          if (!signature) {
+            throw new Error("Transaction signature is undefined.");
+          }
+
+          const latestBlockhash = await connection?.getLatestBlockhash();
+          if (!latestBlockhash) {
+            throw new Error("Failed to fetch latest blockhash.");
+          }
+
+          const confirmation = await connection?.confirmTransaction(
+            {
+              signature,
+              blockhash: latestBlockhash.blockhash,
+              lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+            },
             "finalized"
           );
 
-          if (confirmation.value.err) {
+          if (confirmation?.value.err) {
             throw new Error(
               `Transaction failed: ${JSON.stringify(confirmation.value.err)}`
             );
@@ -331,222 +375,243 @@ export default function Page() {
     }
   };
 
+  // async function handleSignInstruction() {
+
+  //   const base64Instruction = "...";
+  //   try {
+  //     const signature = await signMessage(base64Instruction);
+  //     console.log("Signature :", signature);
+
+  //   } catch (err) {
+  //     console.error("Signing failed:", err);
+  //   }
+  // }
 
 
   return (
-    <div className="h-screen flex items-center justify-center bg-black">
-      <div className="relative w-[35%] h-[85vh] flex flex-col gap-3">
-        <div
-          className="absolute top-[42%] left-[50%] w-[33px] h-[33px] items-center flex justify-center border-[1px] rounded-md z-1 bg-[#141414] transform -translate-x-1/2 "
-          onClick={handleTokensSwap}
-        >
-          <BsArrowDown size={22} color="white" />
-        </div>
-        <p className="text-[28px] text-white text-center font-medium">
-          STAY INVISIBLE
-        </p>
-        <div className="w-full rounded-[18px] border h-[33%] p-6 bg-[#101012]">
-          <p className="mb-2 text-[14px] text-[#CDCDCF] font-semibold">SELL</p>
-          <div className="flex justify-between items-center text-white">
-            <input
-              type="number"
-              value={amount}
-              placeholder="0"
-              onChange={(e) => setAmount(Number(e.target.value))}
-              className="text-[25px] font-semibold bg-transparent border-none outline-none overflow-none"
-            />
+    <>
+      <Navbar />
+      <div className="h-90vh pt-10  flex items-center justify-center bg-black">
+        <div className="relative w-[35%] h-[85vh] flex flex-col gap-3">
+          <div
+            className="absolute top-[31%] left-[50%] w-[33px] h-[33px] items-center flex justify-center border-[1px] rounded-md z-1 bg-[#141414] transform -translate-x-1/2 "
+            onClick={handleTokensSwap}
+          >
+            <BsArrowDown size={22} color="white" />
+          </div>
+          
+          <div className="w-full rounded-[18px] border h-[33%] p-6 bg-[#101012]">
+            <p className="mb-2 text-[14px] text-[#CDCDCF] font-semibold">
+              SELL
+            </p>
+            <div className="flex justify-between items-center text-white">
+              <input
+                type="number"
+                value={amount}
+                placeholder="0"
+                onChange={(e) => setAmount(Number(e.target.value))}
+                className="text-[25px] font-semibold bg-transparent border-none outline-none overflow-none"
+              />
 
-            {/* TokenSelector */}
+              {/* TokenSelector */}
 
-            <div className="relative">
-              {/* Search Bar (Click to Open Modal) */}
-              <button
-                className="w-full flex items-center px-4 py-2 gap-2 border border-gray-600 rounded-md bg-gray-800 text-white"
-                onClick={() => setIsOpen(true)}
-              >
-                <img
-                  src={selectedToken?.logo}
-                  alt={selectedToken?.symbol}
-                  className="w-6 h-6 mr-1 rounded-full"
-                />
-                {selectedToken?.symbol}
-                <IoIosArrowDown />
-              </button>
+              <div className="relative">
+                {/* Search Bar (Click to Open Modal) */}
+                <button
+                  className="w-full flex items-center px-4 py-2 gap-2 border border-gray-600 rounded-md bg-gray-800 text-white"
+                  onClick={() => setIsOpen(true)}
+                >
+                  <img
+                    src={selectedToken?.logo}
+                    alt={selectedToken?.symbol}
+                    className="w-6 h-6 mr-1 rounded-full"
+                  />
+                  {selectedToken?.symbol}
+                  <IoIosArrowDown />
+                </button>
 
-              {/* Modal */}
-              {isOpen && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-                  <div className="bg-gray-900 p-5 rounded-lg w-[35%]">
-                    <div className="flex justify-between">
-                      <h2 className="text-white text-lg">Select a Token</h2>
-                      <button
-                        onClick={() => setIsOpen(false)}
-                        className="text-gray-400 hover:text-white"
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    {/* Search Input */}
-                    <input
-                      type="text"
-                      // value={query}
-                      placeholder="Search token..."
-                      className="outline-none w-full mt-3 px-3 py-2 rounded-md bg-gray-800 text-white "
-                      onChange={(e) => setQuery(e.target.value)}
-                    />
-
-                    {/* Token List */}
-                    <div className="mt-3 max-h-60 overflow-y-auto">
-                      {filteredTokens.map((token) => (
+                {/* Modal */}
+                {isOpen && (
+                  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+                    <div className="bg-gray-900 p-5 rounded-lg w-[35%]">
+                      <div className="flex justify-between">
+                        <h2 className="text-white text-lg">Select a Token</h2>
                         <button
-                          key={token.address}
-                          className="w-full flex items-center px-4 py-2 hover:bg-gray-700 rounded-md text-white"
-                          onClick={() => {
-                            setSelectedToken(token);
-                            setIsOpen(false);
-                          }}
+                          onClick={() => setIsOpen(false)}
+                          className="text-gray-400 hover:text-white"
                         >
-                          <img
-                            src={token.logo}
-                            alt={token.symbol}
-                            className="w-6 h-6 mr-2 rounded-full"
-                          />
-                          {token.symbol}
+                          ✕
                         </button>
-                      ))}
+                      </div>
+
+                      {/* Search Input */}
+                      <input
+                        type="text"
+                        // value={query}
+                        placeholder="Search token..."
+                        className="outline-none w-full mt-3 px-3 py-2 rounded-md bg-gray-800 text-white "
+                        onChange={(e) => setQuery(e.target.value)}
+                      />
+
+                      {/* Token List */}
+                      <div className="mt-3 max-h-60 overflow-y-auto">
+                        {filteredTokens.map((token) => (
+                          <button
+                            key={token.address}
+                            className="w-full flex items-center px-4 py-2 hover:bg-gray-700 rounded-md text-white"
+                            onClick={() => {
+                              setSelectedToken(token);
+                              setIsOpen(false);
+                            }}
+                          >
+                            <img
+                              src={token.logo}
+                              alt={token.symbol}
+                              className="w-6 h-6 mr-2 rounded-full"
+                            />
+                            {token.symbol}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            {/* Token Selector End  */}
-          </div>
-          <div className="w-full mx-auto items-center flex justify-between mt-8">
-            <p className="font-semibold text-[15px]">
-              ${(amount ?? 0) * firstTokenPrice}
-            </p>
-            <div className="flex gap-2.5 items-center">
-              <IoWallet size={23} />
-              <span className="text-[15px]">1.2415</span>
-              <div className="w-[45px] h-[25px] rounded-md font-semibold flex items-center justify-center text-[14px] bg-[#262628]">
-                <span className="text-[12px] font-semibold">MAX</span>
+              {/* Token Selector End  */}
+            </div>
+            <div className="w-full mx-auto items-center flex justify-between mt-8">
+              <p className="font-semibold text-[15px]">
+                ${(amount ?? 0) * firstTokenPrice}
+              </p>
+              <div className="flex gap-2.5 items-center">
+                <IoWallet size={23} />
+                <span className="text-[15px]">1.2415</span>
+                <div className="w-[45px] h-[25px] rounded-md font-semibold flex items-center justify-center text-[14px] bg-[#262628]">
+                  <span className="text-[12px] font-semibold">MAX</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* BUY SECTION  */}
+          {/* BUY SECTION  */}
 
-        <div className="w-full rounded-[18px] border h-[33%] p-6 bg-[#101012]">
-          <p className="mb-2 text-[14px] font-semibold text-[#CDCDCF] ">BUY</p>
-          <div className="flex justify-between items-center">
-            <input
-              type="number"
-              value={secondAmount}
-              placeholder="0"
-              onChange={(e) => setSecondAmount(Number(e.target.value))}
-              className="text-[25px] font-semibold bg-transparent border-none outline-none overflow-none text-white"
-            />
+          <div className="w-full rounded-[18px] border h-[33%] p-6 bg-[#101012]">
+            <p className="mb-2 text-[14px] font-semibold text-[#CDCDCF] ">
+              BUY
+            </p>
+            <div className="flex justify-between items-center">
+              <input
+                type="number"
+                value={secondAmount}
+                placeholder="0"
+                onChange={(e) => setSecondAmount(Number(e.target.value))}
+                className="text-[25px] font-semibold bg-transparent border-none outline-none overflow-none text-white"
+              />
 
-            {/* TokenSelector */}
+              {/* TokenSelector */}
 
-            <div className="relative">
-              {/* Search Bar (Click to Open Modal) */}
-              <button
-                className="w-full flex items-center px-4 py-2 gap-2 border border-gray-600 rounded-md bg-gray-800 text-white"
-                onClick={() => setIsSecondOpen(true)}
-              >
-                <img
-                  src={secondSelectedToken?.logo}
-                  alt={secondSelectedToken?.symbol}
-                  className="w-6 h-6 mr-1 rounded-full"
-                />
-                {secondSelectedToken?.symbol}
-                <IoIosArrowDown />
-              </button>
+              <div className="relative">
+                {/* Search Bar (Click to Open Modal) */}
+                <button
+                  className="w-full flex items-center px-4 py-2 gap-2 border border-gray-600 rounded-md bg-gray-800 text-white"
+                  onClick={() => setIsSecondOpen(true)}
+                >
+                  <img
+                    src={secondSelectedToken?.logo}
+                    alt={secondSelectedToken?.symbol}
+                    className="w-6 h-6 mr-1 rounded-full"
+                  />
+                  {secondSelectedToken?.symbol}
+                  <IoIosArrowDown />
+                </button>
 
-              {/* Modal */}
-              {isSecondOpen && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-                  <div className="bg-gray-900 p-5 rounded-lg w-[35%]">
-                    <div className="flex justify-between">
-                      <h2 className="text-white text-lg">Select a Token</h2>
-                      <button
-                        onClick={() => setIsOpen(false)}
-                        className="text-gray-400 hover:text-white"
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    {/* Search Input */}
-                    <input
-                      type="text"
-                      // value={query}
-                      placeholder="Search token..."
-                      className="outline-none w-full mt-3 px-3 py-2 rounded-md bg-gray-800 text-white "
-                      onChange={(e) => setQuery(e.target.value)}
-                    />
-
-                    {/* Token List */}
-                    <div className="mt-3 max-h-60 overflow-y-auto">
-                      {filteredTokens.map((token) => (
+                {/* Modal */}
+                {isSecondOpen && (
+                  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+                    <div className="bg-gray-900 p-5 rounded-lg w-[35%]">
+                      <div className="flex justify-between">
+                        <h2 className="text-white text-lg">Select a Token</h2>
                         <button
-                          key={token.address}
-                          className="w-full flex items-center px-4 py-2 hover:bg-gray-700 rounded-md text-white"
-                          onClick={() => {
-                            setSecondSelectedToken(token);
-                            setIsSecondOpen(false);
-                          }}
+                          onClick={() => setIsOpen(false)}
+                          className="text-gray-400 hover:text-white"
                         >
-                          <img
-                            src={token.logo}
-                            alt={token.symbol}
-                            className="w-6 h-6 mr-2 rounded-full"
-                          />
-                          {token.symbol}
+                          ✕
                         </button>
-                      ))}
+                      </div>
+
+                      {/* Search Input */}
+                      <input
+                        type="text"
+                        // value={query}
+                        placeholder="Search token..."
+                        className="outline-none w-full mt-3 px-3 py-2 rounded-md bg-gray-800 text-white "
+                        onChange={(e) => setQuery(e.target.value)}
+                      />
+
+                      {/* Token List */}
+                      <div className="mt-3 max-h-60 overflow-y-auto">
+                        {filteredTokens.map((token) => (
+                          <button
+                            key={token.address}
+                            className="w-full flex items-center px-4 py-2 hover:bg-gray-700 rounded-md text-white"
+                            onClick={() => {
+                              setSecondSelectedToken(token);
+                              setIsSecondOpen(false);
+                            }}
+                          >
+                            <img
+                              src={token.logo}
+                              alt={token.symbol}
+                              className="w-6 h-6 mr-2 rounded-full"
+                            />
+                            {token.symbol}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            {/* Token Selector End  */}
-          </div>
-          <div className="w-full mx-auto items-center flex justify-between mt-8">
-            <p className="font-semibold text-[15px]">
-              $ {secondAmount * secondTokenPrice}
-            </p>
-            <div className="flex gap-2.5 items-center">
-              <IoWallet size={23} />
-              <div className="w-[45px] h-[25px] rounded-md font-semibold flex items-center justify-center text-[14px] bg-[#262628]">
-                <span className="text-[12px] font-semibold">MAX</span>
+              {/* Token Selector End  */}
+            </div>
+            <div className="w-full mx-auto items-center flex justify-between mt-8">
+              <p className="font-semibold text-[15px]">
+                $ {secondAmount * secondTokenPrice}
+              </p>
+              <div className="flex gap-2.5 items-center">
+                <IoWallet size={23} />
+                <div className="w-[45px] h-[25px] rounded-md font-semibold flex items-center justify-center text-[14px] bg-[#262628]">
+                  <span className="text-[12px] font-semibold">MAX</span>
+                </div>
               </div>
             </div>
           </div>
+          <button
+            className="w-full rounded-[10px] flex items-center justify-center bg-white text-black h-[50px] text-[16px] cursor-pointer font-medium"
+            onClick={isConnected ? handleSwap : handleConnect}
+            disabled={isSwapping}
+          >
+            {isSwapping
+              ? "Swapping..."
+              : !isConnected
+              ? "CONNECT WALLET"
+              : amount === null
+              ? "Enter an Amount"
+              : "Swap"}
+          </button>
+{/* 
+          <div
+            className=""
+            style={{
+              display: "none",
+            }}
+          >
+            <WalletMultiButton />
+          </div> */}
         </div>
-        <button
-          className="w-full rounded-[10px] flex items-center justify-center bg-white text-black h-[50px] text-[16px] cursor-pointer font-medium"
-          onClick={connected ? handleSwap : handleWalletConnect}
-          disabled={isSwapping}
-        >
-          {isSwapping
-            ? "Swapping..."
-            : !connected
-            ? "CONNECT WALLET"
-            : amount === null
-            ? "Enter an Amount"
-            : "Swap"}
-        </button>
-
-        <div className="" style={{
-          display: "none"
-        }}><WalletMultiButton/></div>
       </div>
-    </div>
+    </>
   );
 }
