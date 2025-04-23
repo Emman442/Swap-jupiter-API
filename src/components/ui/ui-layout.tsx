@@ -1,14 +1,19 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import {usePathname} from 'next/navigation'
-import * as React from 'react'
-import {ReactNode, Suspense, useEffect, useRef} from 'react'
-import toast, {Toaster} from 'react-hot-toast'
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import * as React from "react";
+import { ReactNode, Suspense, useEffect, useRef } from "react";
+import toast, { Toaster } from "react-hot-toast";
 
-
-export function UiLayout({ children, links }: { children: ReactNode; links: { label: string; path: string }[] }) {
-  const pathname = usePathname()
+export function UiLayout({
+  children,
+  links,
+}: {
+  children: ReactNode;
+  links: { label: string; path: string }[];
+}) {
+  const pathname = usePathname();
 
   return (
     <div className="h-full flex flex-col">
@@ -23,8 +28,15 @@ export function UiLayout({ children, links }: { children: ReactNode; links: { la
         </div>
       </div> */}
       <div className="flex-grow">
-          {children}
-        <Toaster position="bottom-right" />
+        {children}
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              fontSize: "13px"
+            }
+          }}
+        />
       </div>
       {/* <footer className="footer footer-center p-4 bg-base-300 text-base-content">
         <aside>
@@ -42,7 +54,7 @@ export function UiLayout({ children, links }: { children: ReactNode; links: { la
         </aside>
       </footer> */}
     </div>
-  )
+  );
 }
 
 export function AppModal({
@@ -54,24 +66,24 @@ export function AppModal({
   submitDisabled,
   submitLabel,
 }: {
-  children: ReactNode
-  title: string
-  hide: () => void
-  show: boolean
-  submit?: () => void
-  submitDisabled?: boolean
-  submitLabel?: string
+  children: ReactNode;
+  title: string;
+  hide: () => void;
+  show: boolean;
+  submit?: () => void;
+  submitDisabled?: boolean;
+  submitLabel?: string;
 }) {
-  const dialogRef = useRef<HTMLDialogElement | null>(null)
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
 
   useEffect(() => {
-    if (!dialogRef.current) return
+    if (!dialogRef.current) return;
     if (show) {
-      dialogRef.current.showModal()
+      dialogRef.current.showModal();
     } else {
-      dialogRef.current.close()
+      dialogRef.current.close();
     }
-  }, [show, dialogRef])
+  }, [show, dialogRef]);
 
   return (
     <dialog className="modal" ref={dialogRef}>
@@ -81,8 +93,12 @@ export function AppModal({
         <div className="modal-action">
           <div className="join space-x-2">
             {submit ? (
-              <button className="btn btn-xs lg:btn-md btn-primary" onClick={submit} disabled={submitDisabled}>
-                {submitLabel || 'Save'}
+              <button
+                className="btn btn-xs lg:btn-md btn-primary"
+                onClick={submit}
+                disabled={submitDisabled}
+              >
+                {submitLabel || "Save"}
               </button>
             ) : null}
             <button onClick={hide} className="btn">
@@ -92,7 +108,7 @@ export function AppModal({
         </div>
       </div>
     </dialog>
-  )
+  );
 }
 
 export function AppHero({
@@ -100,37 +116,47 @@ export function AppHero({
   title,
   subtitle,
 }: {
-  children?: ReactNode
-  title: ReactNode
-  subtitle: ReactNode
+  children?: ReactNode;
+  title: ReactNode;
+  subtitle: ReactNode;
 }) {
   return (
     <div className="hero py-[64px]">
       <div className="hero-content text-center">
         <div className="max-w-2xl">
-          {typeof title === 'string' ? <h1 className="text-5xl font-bold">{title}</h1> : title}
-          {typeof subtitle === 'string' ? <p className="py-6">{subtitle}</p> : subtitle}
+          {typeof title === "string" ? (
+            <h1 className="text-5xl font-bold">{title}</h1>
+          ) : (
+            title
+          )}
+          {typeof subtitle === "string" ? (
+            <p className="py-6">{subtitle}</p>
+          ) : (
+            subtitle
+          )}
           {children}
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export function ellipsify(str = '', len = 4) {
+export function ellipsify(str = "", len = 4) {
   if (str.length > 30) {
-    return str.substring(0, len) + '..' + str.substring(str.length - len, str.length)
+    return (
+      str.substring(0, len) + ".." + str.substring(str.length - len, str.length)
+    );
   }
-  return str
+  return str;
 }
 
 export function useTransactionToast() {
   return (signature: string) => {
     toast.success(
-      <div className={'text-center'}>
+      <div className={"text-center"}>
         <div className="text-lg">Transaction sent</div>
         {/* <ExplorerLink path={`tx/${signature}`} label={'View Transaction'} className="btn btn-xs btn-primary" /> */}
-      </div>,
-    )
-  }
+      </div>
+    );
+  };
 }
