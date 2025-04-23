@@ -334,10 +334,10 @@ export default function Page() {
 
 
   return (
-    <div className="h-full flex items-center justify-center bg-black">
+    <div className="h-screen flex items-center justify-center bg-black">
       <div className="relative w-[35%] h-[85vh] flex flex-col gap-3">
         <div
-          className="absolute top-[44.3%] left-[50%] w-[33px] h-[33px] items-center flex justify-center border-[1px] rounded-md z-1 bg-[#141414] transform -translate-x-1/2 "
+          className="absolute top-[42%] left-[50%] w-[33px] h-[33px] items-center flex justify-center border-[1px] rounded-md z-1 bg-[#141414] transform -translate-x-1/2 "
           onClick={handleTokensSwap}
         >
           <BsArrowDown size={22} color="white" />

@@ -1,4 +1,4 @@
-// File: C:\Users\Dev projects\Aggregator-jup\src\app\api\tokens\route.ts
+// File: C:\Users\Dev projects\Swap-jupiter-API\src\app\api\tokens\route.ts
 import * as entry from '../../../../../src/app/api/tokens/route.js'
 import type { NextRequest } from 'next/server.js'
 
