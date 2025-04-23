@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 html,
-body {
+/* body {
     height: 100%;
-}
+} */
 
 .wallet-adapter-button-trigger {
     background: rgb(100, 26, 230) !important;
